@@ -47,7 +47,7 @@ class CustomFlattenObservation(gym.Wrapper):
         else:
             reward = goal_reward
         
-        if goal_reward == 0:
+        if goal_reward == 0: # If the object reaches the goal, the reward is reset to avoid incoherent learning
             reward = 0
         
         return self.flatten_obs(obs), reward, done, truncated, info, obs #It also returns the original obs, split, to make it easier to implement HER

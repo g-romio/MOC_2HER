@@ -96,7 +96,7 @@ def apply_her(transitions, env, k, hermvobj, objcoeff, itschrew, itsheroff):
 
                         new_reward = goal_reward
 
-                    if goal_reward == 0:
+                    if goal_reward == 0: # If the object reaches the goal, the reward is reset to avoid incoherent learning
                         new_reward = 0
                     
                     new_transition = {
