@@ -47,7 +47,7 @@ class OptionStepCounter:
         for option in self.option_timestep_counts:
             self.option_timestep_counts[option] = 0
 
-def apply_her(transitions, env, k, hermvobj, objcoeff, itschrew, itsheroff):
+def apply_her(transitions, env, k, hermvobj, objcoeff, its2herdis, kdecay):
     augmented_transitions = []
     totalTimesteps = 0
     has_obj = env.unwrapped.has_object
@@ -66,18 +66,17 @@ def apply_her(transitions, env, k, hermvobj, objcoeff, itschrew, itsheroff):
         cumsum_splits = np.cumsum(split_sizes)
         s1, s2, s3 = cumsum_splits[0], cumsum_splits[1], cumsum_splits[2]
 
-        if (hermvobj==0 or (not np.allclose(initial_position, final_position, atol=dist_objMoved))) and (iters_so_far <= itsheroff):
+        if (kdecay>0): #Computes k_her decay
+            k = math.ceil(k-(iters_so_far/kdecay))
 
-            #Computes k_her decay
-            k = math.ceil(k*(1-(iters_so_far/itsheroff)))
+        if (hermvobj==0 or (not np.allclose(initial_position, final_position, atol=dist_objMoved))) and (k>0):
 
             for j in range(k):
-
                 for t_idx, t in enumerate(transitions): #Uses strategy "future"
                     next_state_reconstructed = t["state"][:s1]
                     future_timestep = np.random.randint(t_idx, len(transitions))
 
-                    if iters_so_far <= itschrew and has_obj: #Applies 2HER only if the environment has object interaction
+                    if iters_so_far <= its2herdis and has_obj: #Applies 2HER only if the environment has object interaction
                         hindsight_object = transitions[future_timestep]["state"][0:3]
                         object_reward = env.compute_reward(t["state"][0:3], hindsight_object, info={})
 
@@ -139,7 +138,7 @@ def append_transitions(array, transitions, key, stack_type="vstack", dtype=None,
             raise ValueError(f"Invalid stack type: {stack_type}")
 
 
-def traj_segment_generator(pi,env,horizon,stochastic,num_options,saves,rewbuffer,epoch,seed,w_intfc,switch,gamma,eta,option_counter,render,is_goal_env,kher,hermvobj,objcoeff,itschrew,itsheroff):
+def traj_segment_generator(pi,env,horizon,stochastic,num_options,saves,rewbuffer,epoch,seed,w_intfc,switch,gamma,eta,option_counter,render,is_goal_env,kher,hermvobj,objcoeff,its2herdis,kdecay):
     
     #Initializes auxiliar HER buffers
     her_state = np.empty((0,))
@@ -216,7 +215,7 @@ def traj_segment_generator(pi,env,horizon,stochastic,num_options,saves,rewbuffer
         if t > 0 and t % horizon == 0:
 
             # ===== HER application and calculations =====
-            augmented_transitions = apply_her(episode_transitions, env, kher, hermvobj, objcoeff, itschrew, itsheroff)
+            augmented_transitions = apply_her(episode_transitions, env, kher, hermvobj, objcoeff, its2herdis, kdecay)
 
             # Increments all HER buffers for further processing
             if (len(augmented_transitions)>0):
@@ -413,7 +412,7 @@ def traj_segment_generator(pi,env,horizon,stochastic,num_options,saves,rewbuffer
                 cont_solved += 1
             cont_episodes += 1
             
-            augmented_transitions = apply_her(episode_transitions, env, kher, hermvobj, objcoeff, itschrew, itsheroff)
+            augmented_transitions = apply_her(episode_transitions, env, kher, hermvobj, objcoeff, its2herdis, kdecay)
 
             # Increments all HER buffers for further processing
             if (len(augmented_transitions)>0):
@@ -501,8 +500,8 @@ def learn(env, policy_func, *,
         kher=1,
         hermvobj=1,
         objcoeff=1,
-        itschrew=150,
-        itsheroff=300
+        its2herdis=150,
+        kdecay=50
         ):
 
 
@@ -662,7 +661,7 @@ def learn(env, policy_func, *,
     # --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     
     option_counter = OptionStepCounter(num_options)
-    seg_gen = traj_segment_generator(pi,env,timesteps_per_batch,stochastic=True,num_options=num_options,saves=saves,rewbuffer=rewbuffer,epoch=epoch,seed=seed,w_intfc=w_intfc,switch=switch,gamma=gamma,eta=eta,option_counter=option_counter,render=render,is_goal_env=is_goal_env,kher=kher,hermvobj=hermvobj,objcoeff=objcoeff,itschrew=itschrew,itsheroff=itsheroff)
+    seg_gen = traj_segment_generator(pi,env,timesteps_per_batch,stochastic=True,num_options=num_options,saves=saves,rewbuffer=rewbuffer,epoch=epoch,seed=seed,w_intfc=w_intfc,switch=switch,gamma=gamma,eta=eta,option_counter=option_counter,render=render,is_goal_env=is_goal_env,kher=kher,hermvobj=hermvobj,objcoeff=objcoeff,its2herdis=its2herdis,kdecay=kdecay)
 
     datas = [0 for _ in range(num_options)]
 

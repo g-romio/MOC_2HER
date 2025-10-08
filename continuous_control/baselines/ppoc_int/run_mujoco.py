@@ -15,7 +15,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 class CustomFlattenObservation(gym.Wrapper):
-    def __init__(self, env, objcoeff, itschrew):
+    def __init__(self, env, objcoeff, its2herdis):
         super().__init__(env)
         self.old_position = None
         self.new = True
@@ -23,7 +23,7 @@ class CustomFlattenObservation(gym.Wrapper):
         self.cont = 0
         self.initial_position = np.array([0, 0, 0])
         self.objcoeff = objcoeff
-        self.itschrew = itschrew
+        self.its2herdis = its2herdis
         self.observation_space = gym.spaces.Box(
             low=-np.inf, high=np.inf,
             shape=(
@@ -42,7 +42,7 @@ class CustomFlattenObservation(gym.Wrapper):
         goal_reward = self.env.compute_reward(obs["achieved_goal"], obs["desired_goal"], info={})
         object_reward = self.env.compute_reward(obs["observation"][0:3], obs['observation'][3:6], info={})
 
-        if iters_so_far <= self.itschrew:
+        if iters_so_far <= self.its2herdis:
             reward = self.objcoeff*object_reward + (1-self.objcoeff)*goal_reward
         else:
             reward = goal_reward
@@ -122,7 +122,7 @@ def custom_reset_sim(self): # Custom function that will replace _reset_sim, keep
         return False
 
 
-def train(env_id,num_timesteps,seed,num_options,app,saves,wsaves,epoch,w_intfc,switch,mainlr,intlr,piolr,multi,eta,render,optimsize,entcoeff,kher,hermvobj,objcoeff,itschrew,itsheroff):
+def train(env_id,num_timesteps,seed,num_options,app,saves,wsaves,epoch,w_intfc,switch,mainlr,intlr,piolr,multi,eta,render,optimsize,entcoeff,kher,hermvobj,objcoeff,its2herdis,kdecay):
     import mlp_policy, pposgd_simple
     U.make_session(num_cpu=1).__enter__()
     set_global_seeds(seed)
@@ -144,7 +144,7 @@ def train(env_id,num_timesteps,seed,num_options,app,saves,wsaves,epoch,w_intfc,s
         if is_goal_env(env):
             goal_env = True
             print(f"{env_id} is a Goal Environment. Applying FlattenObservation.")
-            env = CustomFlattenObservation(env, objcoeff, itschrew)
+            env = CustomFlattenObservation(env, objcoeff, its2herdis)
 
         obs, obs_org = env.reset()
 
@@ -181,7 +181,7 @@ def train(env_id,num_timesteps,seed,num_options,app,saves,wsaves,epoch,w_intfc,s
             app=app, saves=saves, wsaves=wsaves, epoch=epoch, seed=seed,
             w_intfc=w_intfc,switch=switch,intlr=intlr,piolr=piolr,multi=multi,
             eta=eta,render=render,is_goal_env=goal_env, kher=kher, hermvobj=hermvobj, 
-            objcoeff=objcoeff, itschrew=itschrew, itsheroff=itsheroff
+            objcoeff=objcoeff, its2herdis=its2herdis, kdecay=kdecay
         )
     env.close()
 
@@ -204,13 +204,13 @@ def main():
     parser.add_argument('--optimsize', type=int, default=64)
     parser.add_argument('--entcoeff', type=float, default=0.00)
     parser.add_argument('--kher', type=int, default=4) #Value of k for HER
-    parser.add_argument('--hermvobj', type=int, default=1) #Activates HER only on trajectories with object movement
+    parser.add_argument('--kdecay', type=int, help='decay rate of k', default=50) #Decay rate of k
+    parser.add_argument('--hermvobj', type=int, help='HER only on trajectories with object movement', default=1) #Activates HER only on trajectories with object movement
+    parser.add_argument('--objcoeff', type=float, help='coefficient of object_reward (0-1)', default=1) #Object interaction reward utilization coefficient in 2HER
+    parser.add_argument('--its2herdis', type=int, help='iters to disable object_reward and 2HER', default=150) #Iteration to disable 2HER, keeping only standard HER active
     parser.add_argument('--multi', help='Multi updates', dest='multi', action='store_true', default=False)  
     parser.add_argument('--eta', type=float, default=0.1, help='trade off updates')
     parser.add_argument('--render', action='store_true', default=False)
-    parser.add_argument('--objcoeff', type=float, help='coefficient of object_reward (0-1)', default=1)
-    parser.add_argument('--itschrew', type=int, help='iters to disable object_reward', default=150)
-    parser.add_argument('--itsheroff', type=int, help='iters to disble her', default=300)
 
     args = parser.parse_args()
 
@@ -221,7 +221,7 @@ def main():
      saves=args.saves, wsaves=args.wsaves, epoch=args.epoch,w_intfc=args.w_intfc,
      switch=args.switch,mainlr=args.mainlr,intlr=args.intlr,piolr=args.piolr,multi=args.multi, eta=args.eta, 
      render=args.render, optimsize=args.optimsize, entcoeff=args.entcoeff, kher=args.kher, hermvobj=args.hermvobj, 
-     objcoeff=args.objcoeff, itschrew=args.itschrew, itsheroff=args.itsheroff)
+     objcoeff=args.objcoeff, its2herdis=args.its2herdis, kdecay=args.kdecay)
 
 
 if __name__ == '__main__':
