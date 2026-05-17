@@ -1,6 +1,6 @@
 # Multi-Updates Option Critic with Dual Objectives Hindsight Experience Replay
 
-This repository contains code for the paper Enabling Option Learning in Sparse Rewards with Hindsight Experience Replay presented as a Extended Abstract at [AAMAS 2026](https://cyprusconferences.org/aamas2026/). The implementation is based on gymnasium-robotics, OpenAI's baselines and the Multi-updates Option Critic implementation.
+This repository contains code for the paper Enabling Option Learning in Sparse Rewards with Hindsight Experience Replay presented as a Extended Abstract at [AAMAS 2026](https://cyprusconferences.org/aamas2026/). The implementation is based on [gymnasium-robotics](https://github.com/Farama-Foundation/Gymnasium-Robotics), OpenAI's [baselines](https://github.com/openai/baselines) and the [Multi-updates Option Critic](https://github.com/mklissa/MOC) implementation.
 
 #### Description
 
